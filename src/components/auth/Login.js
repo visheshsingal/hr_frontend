@@ -82,7 +82,7 @@ const Login = () => {
         </form>
         
         <div style={{ textAlign: 'center', marginTop: '1rem' }}>
-          <p>Don't have an account? <Link to="/register">Register here</Link></p>
+          {/* <p>Don't have an account? <Link to="/register">Register here</Link></p> */}
         </div>
       </div>
     </div>
