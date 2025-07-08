@@ -2,6 +2,18 @@ import React, { useState, useEffect } from 'react';
 import api from '../../config/axios';
 import { format } from 'date-fns';
 
+const typeOptions = [
+  { value: 'full-day', label: 'Full Day' },
+  { value: 'half-day', label: 'Half Day' },
+  { value: 'holiday', label: 'Holiday' },
+];
+const statusOptions = [
+  { value: 'present', label: 'Present' },
+  { value: 'absent', label: 'Absent' },
+  { value: 'late', label: 'Late' },
+  { value: 'half-day', label: 'Half Day' },
+];
+
 const AttendanceView = () => {
   const [attendance, setAttendance] = useState([]);
   const [employees, setEmployees] = useState([]);
@@ -14,6 +26,9 @@ const AttendanceView = () => {
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [editModal, setEditModal] = useState({ open: false, record: null });
+  const [editForm, setEditForm] = useState({ type: '', status: '', notes: '' });
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -68,6 +83,38 @@ const AttendanceView = () => {
       'half-day': 'badge-info'
     };
     return `badge ${badgeClasses[status] || 'badge-secondary'}`;
+  };
+
+  const openEditModal = (record) => {
+    setEditForm({
+      type: record.type,
+      status: record.status,
+      notes: record.notes || '',
+    });
+    setEditModal({ open: true, record });
+  };
+
+  const closeEditModal = () => {
+    setEditModal({ open: false, record: null });
+    setEditForm({ type: '', status: '', notes: '' });
+  };
+
+  const handleEditChange = (e) => {
+    setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setEditLoading(true);
+    try {
+      await api.put(`/api/attendance/${editModal.record._id}`, editForm);
+      closeEditModal();
+      fetchAttendance();
+    } catch (error) {
+      alert('Failed to update attendance.');
+    } finally {
+      setEditLoading(false);
+    }
   };
 
   if (loading) {
@@ -156,6 +203,7 @@ const AttendanceView = () => {
                 <th>Check Out</th>
                 <th>Work Hours</th>
                 <th>Notes</th>
+                <th>Edit</th>
               </tr>
             </thead>
             <tbody>
@@ -184,6 +232,11 @@ const AttendanceView = () => {
                     }
                   </td>
                   <td>{record.notes || '-'}</td>
+                  <td>
+                    <button className="btn btn-primary btn-sm" onClick={() => openEditModal(record)}>
+                      Edit
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -215,6 +268,62 @@ const AttendanceView = () => {
           </div>
         )}
       </div>
+      {/* Edit Modal */}
+      {editModal.open && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Edit Attendance</h3>
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label>Type</label>
+                <select
+                  name="type"
+                  value={editForm.type}
+                  onChange={handleEditChange}
+                  className="form-input"
+                  required
+                >
+                  {typeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Status</label>
+                <select
+                  name="status"
+                  value={editForm.status}
+                  onChange={handleEditChange}
+                  className="form-input"
+                  required
+                >
+                  {statusOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Notes</label>
+                <input
+                  type="text"
+                  name="notes"
+                  value={editForm.notes}
+                  onChange={handleEditChange}
+                  className="form-input"
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button type="submit" className="btn btn-success" disabled={editLoading}>
+                  {editLoading ? 'Saving...' : 'Save'}
+                </button>
+                <button type="button" className="btn btn-secondary" onClick={closeEditModal}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
