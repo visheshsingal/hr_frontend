@@ -28,8 +28,15 @@ const HRDashboard = () => {
       const totalEmployees = employeesRes.data.total;
       const activeEmployees = employeesRes.data.employees.filter(emp => emp.isActive).length;
       const todayAttendance = attendanceRes.data.attendance.filter(att => {
-        const today = new Date().toDateString();
-        return new Date(att.date).toDateString() === today;
+        const today = new Date();
+        const todayString = today.getFullYear() + '-' + 
+                           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                           String(today.getDate()).padStart(2, '0');
+        const attDate = new Date(att.date);
+        const attDateString = attDate.getFullYear() + '-' + 
+                             String(attDate.getMonth() + 1).padStart(2, '0') + '-' + 
+                             String(attDate.getDate()).padStart(2, '0');
+        return attDateString === todayString;
       }).length;
 
       setStats({ totalEmployees, activeEmployees, todayAttendance });

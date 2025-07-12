@@ -17,11 +17,22 @@ const EmployeeDashboard = () => {
 
   const checkTodayAttendance = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // Use local timezone instead of UTC to avoid timezone issues
+      const now = new Date();
+      const today = now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0');
       const res = await api.get(`/api/attendance/my?startDate=${today}&endDate=${today}`);
+      
+      console.log('Today\'s date:', today);
+      console.log('Attendance response:', res.data.attendance);
       
       if (res.data.attendance.length > 0) {
         setTodayAttendance(res.data.attendance[0]);
+        console.log('Set today attendance:', res.data.attendance[0]);
+      } else {
+        setTodayAttendance(null);
+        console.log('No attendance found for today');
       }
       setLoading(false);
     } catch (error) {
@@ -41,8 +52,8 @@ const EmployeeDashboard = () => {
 
   const handleMarkAttendance = async (type, notes) => {
     try {
-      const res = await api.post('/api/attendance', { type, notes });
-      setTodayAttendance(res.data.attendance);
+      await api.post('/api/attendance', { type, notes });
+      await checkTodayAttendance(); // Refresh attendance data instead of using limited response
       toast.success('Attendance marked successfully!');
       // Refresh holiday status if it was a holiday
       if (type === 'holiday') {
@@ -54,13 +65,19 @@ const EmployeeDashboard = () => {
   };
 
   const handleCheckout = async () => {
-    if (!todayAttendance) return;
+    if (!todayAttendance) {
+      console.log('No todayAttendance found for checkout');
+      return;
+    }
+    
+    console.log('Attempting checkout with attendance:', todayAttendance);
     
     try {
-              await api.put(`/api/attendance/${todayAttendance.id}/checkout`);
+      await api.put(`/api/attendance/${todayAttendance._id}/checkout`);
       await checkTodayAttendance(); // Refresh data
       toast.success('Check out successful!');
     } catch (error) {
+      console.error('Checkout error:', error);
       toast.error(error.response?.data?.message || 'Failed to check out');
     }
   };
@@ -131,6 +148,9 @@ const EmployeeDashboard = () => {
               <p><strong>Check Out:</strong> {new Date(todayAttendance.checkOut).toLocaleTimeString()}</p>
             )}
             {todayAttendance.notes && <p><strong>Notes:</strong> {todayAttendance.notes}</p>}
+            <p style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: '0.5rem' }}>
+              <strong>Debug:</strong> ID: {todayAttendance._id}, CheckOut: {todayAttendance.checkOut ? 'Yes' : 'No'}
+            </p>
             
             {!todayAttendance.checkOut && (
               <button 
@@ -140,6 +160,11 @@ const EmployeeDashboard = () => {
               >
                 Check Out
               </button>
+            )}
+            {todayAttendance.checkOut && (
+              <p style={{ color: '#6b7280', marginTop: '1rem' }}>
+                Already checked out at {new Date(todayAttendance.checkOut).toLocaleTimeString()}
+              </p>
             )}
           </div>
         ) : (
